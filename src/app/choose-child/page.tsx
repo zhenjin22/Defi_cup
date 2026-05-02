@@ -4,6 +4,9 @@ import { ChooseChildClient } from "@/components/ChooseChildClient";
 import { fetchGroupPlayers } from "@/lib/queries";
 import { DEFAULT_GROUP, getViewer } from "@/lib/viewer";
 
+/** Avoid stale empty RSC/HTML cache when player roster changes or env differs per request. */
+export const dynamic = "force-dynamic";
+
 export default async function ChooseChildPage() {
   const { selectedPlayer } = await getViewer();
   if (selectedPlayer) redirect("/");
