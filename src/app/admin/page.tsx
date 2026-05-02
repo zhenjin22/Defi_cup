@@ -82,7 +82,14 @@ export default async function AdminPage({
   const disputed = matches.filter((m) => m.status === "disputed");
 
   return (
-    <AppShell title="Admin" right={null}>
+    <AppShell
+      title="Admin"
+      right={
+        <ButtonLink href="/" variant="secondary" size="sm" className="whitespace-nowrap">
+          Back to player mode
+        </ButtonLink>
+      }
+    >
       <div className="space-y-4">
         {flashText(msg) ? (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
