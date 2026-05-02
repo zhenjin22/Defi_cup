@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { ViewerControls } from "@/components/ViewerControls";
 import { Card } from "@/components/ui/Card";
+import type { MatchStatus } from "@/lib/db/types";
 import { isPairingResultLocked } from "@/lib/pair-lock";
 import { fetchGroupMatches, fetchGroupPlayers, getMatchKey } from "@/lib/queries";
 import { DEFAULT_GROUP, getViewer } from "@/lib/viewer";
@@ -120,7 +121,7 @@ export default async function MatrixPage() {
                     const key = getMatchKey(row.id, col.id);
                     const match = matchByKey.get(key);
                     const status = match?.status ?? "not_scheduled";
-                    const completed = match ? isPairingResultLocked(match.status) : false;
+                    const completed = match ? isPairingResultLocked(match.status as MatchStatus) : false;
                     const href = completed
                       ? `/matches/${match!.id}`
                       : match
