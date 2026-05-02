@@ -68,6 +68,10 @@ export async function createInvitations(formData: FormData) {
     redirect("/schedule?error=max_active");
   }
 
+  if (oppIds.length > availableSlots) {
+    redirect("/schedule?error=no_slot");
+  }
+
   const toProcess = oppIds;
 
   for (const opponentId of toProcess) {
