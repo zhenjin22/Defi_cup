@@ -1,3 +1,90 @@
+## Défi Cup Juniors Été 2026 (MVP)
+
+Mobile-first web app for parents to schedule and confirm junior tennis matches.
+
+### Tech
+- Next.js (App Router) + TypeScript
+- Tailwind CSS
+- Supabase (Auth + Postgres)
+- Vercel-ready
+
+---
+
+## 1) Supabase setup
+
+### Create a Supabase project
+- Create a new project in Supabase.
+
+### Run the SQL schema
+- In Supabase SQL Editor, run:
+  - `supabase/schema.sql`
+  - then `supabase/seed.sql`
+
+### Configure Auth
+- Enable **Email** provider (magic links).
+- Add a Redirect URL:
+  - Local: `http://localhost:3000/auth/callback`
+  - Production: `https://<your-vercel-domain>/auth/callback`
+
+> Parents do **not** need to log in for the MVP. Auth is kept for future admin use.
+
+---
+
+## 2) Local development
+
+### Install deps
+
+```bash
+npm install
+```
+
+### Environment variables
+- Copy `.env.local.example` to `.env.local` and fill:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+```bash
+cp .env.local.example .env.local
+```
+
+### Run
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+---
+
+## 3) Using the app
+
+- On first visit, go to `/choose-child`.
+- Select your child and enter the parent phone number (spaces are ignored).
+- Or use **demo mode** to pick any child without verification.
+- Use **“Changer d’enfant”** in the header to switch.
+
+---
+
+## 4) Vercel deployment
+
+1. Push to GitHub
+2. Import into Vercel
+3. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy
+
+Optional: set up a Vercel Cron to hit:
+- `GET /api/cron/reminders`
+
+---
+
+## Notes / MVP trade-offs
+
+- RLS policies are intentionally permissive for MVP (any authenticated user can read/write).  
+  If you need strict per-parent authorization, tighten the policies to only allow parents of the involved players to update a match/score.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
