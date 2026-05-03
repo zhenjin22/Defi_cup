@@ -2,13 +2,12 @@ import Link from "next/link";
 
 const NAV = [
   { href: "/", label: "Home" },
+  { href: "/availability", label: "Availability" },
+  { href: "/schedule", label: "Schedule" },
   { href: "/ranking", label: "Ranking" },
   { href: "/matrix", label: "Matrix" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/availability", label: "Availability" },
-  { href: "/result", label: "Result" },
   { href: "/rules", label: "Rules" },
-  { href: "/admin", label: "Admin" },
+  { href: "/how-to", label: "How To" },
 ] as const;
 
 export function AppShell({
