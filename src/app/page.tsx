@@ -92,33 +92,13 @@ export default async function HomePage() {
 
   const idToName = new Map(players.map((p) => [p.id, `${p.first_name} ${p.last_name}`]));
 
-  const outgoingInvites = matches
-    .filter((m) => m.inviter_player_id === me.id)
-    .filter(
-      (m) =>
-        m.status === "waiting_response" ||
-        m.status === "accepted" ||
-        m.status === "declined" ||
-        m.status === "closed_by_other_acceptance",
-    )
-    .slice(0, 6);
-
-  const incomingInvites = matches
-    .filter((m) => m.status === "waiting_response")
-    .filter(
-      (m) =>
-        (m.player_a_id === me.id || m.player_b_id === me.id) &&
-        m.inviter_player_id !== me.id,
-    )
-    .slice(0, 6);
-
   return (
     <AppShell title="Home" right={<ViewerControls />}>
       <div className="space-y-4">
         <div className="rounded-2xl border border-tennis-green/30 bg-gradient-to-br from-tennis-green/25 to-background p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-tennis-green">Next step</p>
           <p className="mt-2 text-lg font-semibold leading-snug">
-            Publish times, claim a slot, or send invitations — then lock a court for {me.first_name}.
+            Publish times, claim a slot, then lock a court for {me.first_name}.
           </p>
           <ButtonLink
             href="/schedule"
@@ -279,63 +259,6 @@ export default async function HomePage() {
                 );
               })}
             </ul>
-          )}
-        </Card>
-
-        <Card title="Invitations inbox">
-          {incomingInvites.length === 0 ? (
-            <p className="text-sm text-muted">Nothing new.</p>
-          ) : (
-            <div className="space-y-2">
-              {incomingInvites.map((m) => {
-                const inviterName = idToName.get(m.inviter_player_id ?? "") ?? "A player";
-                return (
-                  <Link
-                    key={m.id}
-                    href={`/matches/${m.id}`}
-                    className="block rounded-2xl border border-border bg-background p-3 hover:bg-foreground/5"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{inviterName} invited your child</p>
-                        <p className="mt-1 text-xs text-muted">Open to reply</p>
-                      </div>
-                      {badge(m.status)}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        <Card title="Sent invitations">
-          {outgoingInvites.length === 0 ? (
-            <p className="text-sm text-muted">No pending invites from you.</p>
-          ) : (
-            <div className="space-y-2">
-              {outgoingInvites.map((m) => {
-                const otherId = m.player_a_id === me.id ? m.player_b_id : m.player_a_id;
-                const otherName = idToName.get(otherId) ?? "Opponent";
-                return (
-                  <Link
-                    key={m.id}
-                    href={`/matches/${m.id}`}
-                    className="block rounded-2xl border border-border bg-background p-3 hover:bg-foreground/5"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">Invite to {otherName}</p>
-                        <p className="mt-1 text-xs text-muted">
-                          {m.proposed_times?.length ? `${m.proposed_times.length} suggested slots` : "—"}
-                        </p>
-                      </div>
-                      {badge(m.status)}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
           )}
         </Card>
 
