@@ -73,6 +73,10 @@ export async function GET(req: Request) {
       "proposed_by",
       "booking_responsible",
       "booking_status",
+      "court_reserved",
+      "cancellation_reason",
+      "cancelled_at",
+      "cancelled_by_player_id",
     ];
     const rows = (data ?? []).map((r) => ({
       ...r,

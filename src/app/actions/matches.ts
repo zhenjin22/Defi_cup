@@ -129,6 +129,10 @@ export async function createInvitations(formData: FormData) {
       booking_status: (responsible === "undecided" ? "pending" : "not_started") as
         | "pending"
         | "not_started",
+      court_reserved: false,
+      cancellation_reason: null as string | null,
+      cancelled_at: null as string | null,
+      cancelled_by_player_id: null as string | null,
     };
 
     const { data: existing, error: exErr } = await supabase
@@ -347,6 +351,7 @@ export async function bookCourt(formData: FormData) {
     .update({
       status: "scheduled",
       booking_status: "booked",
+      court_reserved: true,
       selected_time: new Date(parsed.data.selected_time).toISOString(),
       court_name: parsed.data.court_name.trim(),
       court_number: courtNum,
@@ -373,6 +378,7 @@ export async function markBookingFailed(formData: FormData) {
     .update({
       status: "booking_failed",
       booking_status: "failed",
+      court_reserved: false,
       selected_time: null,
       court_name: null,
       court_number: null,
@@ -433,6 +439,9 @@ export async function submitScore(formData: FormData) {
     .eq("id", matchId)
     .single();
   if (mErr || !row) redirect(`/matches/${matchId}?error=not_found`);
+  if (row.status === "cancelled") {
+    redirect(`/matches/${matchId}?error=match_cancelled`);
+  }
   if (isPairingResultLocked(row.status)) {
     redirect(`/matches/${matchId}?error=pair_already_completed`);
   }
@@ -577,6 +586,10 @@ export async function publishDirectResult(formData: FormData) {
         proposed_by: null,
         booking_responsible: "undecided",
         booking_status: "not_started",
+        court_reserved: false,
+        cancellation_reason: null,
+        cancelled_at: null,
+        cancelled_by_player_id: null,
       })
       .select("id")
       .single();
@@ -588,6 +601,9 @@ export async function publishDirectResult(formData: FormData) {
       .update({
         status: "published",
         selected_time: selectedTime,
+        cancellation_reason: null,
+        cancelled_at: null,
+        cancelled_by_player_id: null,
       })
       .eq("id", matchId);
   }

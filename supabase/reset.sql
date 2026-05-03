@@ -13,6 +13,7 @@ drop policy if exists "matches_public_all" on public.matches;
 drop policy if exists "players_public_read" on public.players;
 
 drop table if exists public.scores cascade;
+drop table if exists public.availability_slots cascade;
 drop table if exists public.matches cascade;
 drop table if exists public.players cascade;
 
@@ -42,6 +43,7 @@ create type public.match_status as enum (
   'availability_confirmed',
   'booking_failed',
   'scheduled',
+  'cancelled',
   'published',
   'disputed',
   'resolved'
@@ -82,6 +84,10 @@ create table public.matches (
   proposed_by text null,
   booking_responsible public.booking_responsible not null default 'undecided',
   booking_status public.booking_status not null default 'not_started',
+  court_reserved boolean not null default false,
+  cancellation_reason text null,
+  cancelled_at timestamptz null,
+  cancelled_by_player_id uuid null references public.players (id) on delete set null,
   constraint matches_distinct_players check (player_a_id <> player_b_id),
   constraint matches_proposed_by_side check (
     proposed_by is null or proposed_by in ('player_a', 'player_b')
@@ -96,6 +102,25 @@ create unique index matches_unique_pair on public.matches (
   least(player_a_id, player_b_id),
   greatest(player_a_id, player_b_id)
 );
+
+create table public.availability_slots (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  player_id uuid not null references public.players (id) on delete cascade,
+  group_name text not null,
+  starts_at timestamptz not null,
+  ends_at timestamptz not null,
+  venue_name text null,
+  court_number text null,
+  court_address_notes text null,
+  court_reserved boolean not null default false,
+  status text not null default 'open' check (status in ('open', 'claimed', 'cancelled')),
+  claimed_by_player_id uuid null references public.players (id) on delete set null,
+  match_id uuid null references public.matches (id) on delete set null,
+  constraint availability_slots_time_order check (starts_at < ends_at)
+);
+
+create index availability_slots_group_status_starts on public.availability_slots (group_name, status, starts_at);
 
 create table public.scores (
   id uuid primary key default gen_random_uuid(),
@@ -127,6 +152,7 @@ create table public.app_admins (
 alter table public.players enable row level security;
 alter table public.matches enable row level security;
 alter table public.scores enable row level security;
+alter table public.availability_slots enable row level security;
 alter table public.app_admins enable row level security;
 
 -- Parents use the anon key in the browser (no parent email auth).
@@ -140,6 +166,10 @@ create policy "matches_anon_all" on public.matches
 
 drop policy if exists "scores_anon_all" on public.scores;
 create policy "scores_anon_all" on public.scores
+  for all to anon using (true) with check (true);
+
+drop policy if exists "availability_slots_anon_all" on public.availability_slots;
+create policy "availability_slots_anon_all" on public.availability_slots
   for all to anon using (true) with check (true);
 
 drop policy if exists "app_admins_self_read" on public.app_admins;
@@ -161,6 +191,12 @@ create policy "matches_admin_all" on public.matches
 
 drop policy if exists "scores_admin_all" on public.scores;
 create policy "scores_admin_all" on public.scores
+  for all to authenticated
+  using (exists (select 1 from public.app_admins a where a.user_id = auth.uid()))
+  with check (exists (select 1 from public.app_admins a where a.user_id = auth.uid()));
+
+drop policy if exists "availability_slots_admin_all" on public.availability_slots;
+create policy "availability_slots_admin_all" on public.availability_slots
   for all to authenticated
   using (exists (select 1 from public.app_admins a where a.user_id = auth.uid()))
   with check (exists (select 1 from public.app_admins a where a.user_id = auth.uid()));

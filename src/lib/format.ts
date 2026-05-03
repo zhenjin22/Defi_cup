@@ -9,3 +9,14 @@ export function formatDateTime(iso: string) {
   }).format(d);
 }
 
+/** Long weekday heading for grouping slots (local time). */
+export function formatCalendarDayHeading(iso: string) {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
+

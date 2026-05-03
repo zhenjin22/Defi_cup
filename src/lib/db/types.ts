@@ -9,6 +9,7 @@ export type MatchStatus =
   | "availability_confirmed"
   | "booking_failed"
   | "scheduled"
+  | "cancelled"
   | "published"
   | "disputed"
   | "resolved"
@@ -44,8 +45,32 @@ export type Match = {
   proposed_by: "player_a" | "player_b" | null;
   booking_responsible: BookingResponsible;
   booking_status: BookingStatus;
+  court_reserved?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by_player_id?: string | null;
   created_at?: string;
 };
+
+export type AvailabilitySlotStatus = "open" | "claimed" | "cancelled";
+
+export type AvailabilitySlot = {
+  id: string;
+  player_id: string;
+  group_name: string;
+  starts_at: string;
+  ends_at: string;
+  venue_name: string | null;
+  court_number: string | null;
+  court_address_notes: string | null;
+  court_reserved: boolean;
+  status: AvailabilitySlotStatus;
+  claimed_by_player_id: string | null;
+  match_id: string | null;
+  created_at?: string;
+};
+
+export type MatchCancellationReason = "no_court_available" | "player_unavailable" | "other";
 
 export type NoShowStatus = "none" | "player_a_absent" | "player_b_absent" | "both_absent";
 

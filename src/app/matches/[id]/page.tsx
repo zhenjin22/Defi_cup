@@ -1,3 +1,4 @@
+import { cancelScheduledMatch, updateMatchCourtBooking } from "@/app/actions/availability";
 import {
   bookCourt,
   acceptInvitationAndCloseOthers,
@@ -45,6 +46,7 @@ export default async function MatchDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : null;
+  const msg = typeof sp.msg === "string" ? sp.msg : null;
 
   const supabase = await createSupabaseServerClient();
   const { data: match } = await supabase.from("matches").select("*").eq("id", id).single();
@@ -94,25 +96,43 @@ export default async function MatchDetailPage({
 
   const venueLine = formatCourtDetails(m);
   const pairingLocked = isPairingResultLocked(m.status);
+  const courtMissing = m.status === "scheduled" && !(m.court_reserved ?? false);
+  const playedTimePassed = m.selected_time ? new Date(m.selected_time).getTime() < Date.now() : false;
 
   const errorDisplayed =
     error === "pair_already_completed"
       ? "This pairing already has a final result on file (pair_already_completed). An organiser must use Admin → Reset Match to unlock it."
-      : error === "invalid_games" || error === "games_invalid"
-        ? "Enter games as numbers like 1:6 3:11 0:15 (first player on file : second player for each segment)."
-        : error === "games_tie"
-          ? "Total games are tied — choose a winner that matches who won more games, or adjust the score."
-          : error === "winner_games_mismatch"
-            ? "The winner does not match who won more games in the score line."
-            : error
-              ? decodeURIComponentSafe(error)
-              : null;
+      : error === "match_cancelled"
+        ? "This match was cancelled — you cannot publish a result on a cancelled row."
+        : error === "forbidden"
+          ? "You are not allowed to perform that action on this match."
+          : error === "not_scheduled"
+            ? "That action only applies to a scheduled match."
+            : error === "invalid_games" || error === "games_invalid"
+              ? "Enter games as numbers like 1:6 3:11 0:15 (first player on file : second player for each segment)."
+              : error === "games_tie"
+                ? "Total games are tied — choose a winner that matches who won more games, or adjust the score."
+                : error === "winner_games_mismatch"
+                  ? "The winner does not match who won more games in the score line."
+                  : error
+                    ? decodeURIComponentSafe(error)
+                    : null;
 
   return (
     <AppShell title="Match" right={<ViewerControls />}>
       <div className="space-y-4">
         {errorDisplayed ? (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorDisplayed}</div>
+        ) : null}
+        {msg === "cancelled" ? (
+          <div className="rounded-xl border border-border bg-foreground/5 p-3 text-sm">
+            This match was cancelled. The time slot was reopened so either family can try again from Schedule.
+          </div>
+        ) : null}
+        {msg === "court_saved" ? (
+          <div className="rounded-xl border border-tennis-green/40 bg-tennis-green/10 p-3 text-sm">
+            Court booking details saved.
+          </div>
         ) : null}
 
         <Card title="Players" right={statusBadge(m.status)}>
@@ -307,19 +327,98 @@ export default async function MatchDetailPage({
           ) : null}
 
           {m.status === "scheduled" && m.selected_time ? (
-            <div className="mt-4 rounded-xl border border-tennis-green/40 bg-tennis-green/10 p-3">
-              <p className="text-sm font-semibold">Scheduled match</p>
-              <p className="mt-1 text-sm">{formatDateTime(m.selected_time)}</p>
-              <p className="mt-2 text-sm font-medium">{venueLine}</p>
+            <div className="mt-4 space-y-3">
+              <div className="rounded-xl border border-tennis-green/40 bg-tennis-green/10 p-3">
+                <p className="text-sm font-semibold">Scheduled match</p>
+                <p className="mt-1 text-sm">{formatDateTime(m.selected_time)}</p>
+                <p className="mt-2 text-sm font-medium">{venueLine}</p>
+              </div>
+              {courtMissing ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  <p className="font-semibold">Court not booked yet</p>
+                  <p className="mt-1 text-xs leading-relaxed">
+                    Confirm when a court is reserved, or cancel if no court is available so both families can pick a new
+                    time.
+                  </p>
+                </div>
+              ) : null}
+              {viewerSide && m.status === "scheduled" ? (
+                <div className="rounded-xl border border-border bg-background p-3 space-y-3">
+                  <p className="text-sm font-semibold">Court booking</p>
+                  <p className="text-xs text-muted">Either parent can update this.</p>
+                  <form action={updateMatchCourtBooking} className="space-y-2">
+                    <input type="hidden" name="match_id" value={m.id} />
+                    <label className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="court_reserved"
+                        value="on"
+                        defaultChecked={m.court_reserved ?? false}
+                        className="mt-1"
+                      />
+                      <span>Court is reserved / confirmed</span>
+                    </label>
+                    <Field label="Venue / club name">
+                      <Input name="court_name" placeholder="Club name" defaultValue={m.court_name ?? ""} />
+                    </Field>
+                    <Field label="Court number">
+                      <Input name="court_number" placeholder="e.g. 3" defaultValue={m.court_number ?? ""} />
+                    </Field>
+                    <Field label="Address or notes">
+                      <Input
+                        name="court_address_notes"
+                        placeholder="Directions…"
+                        defaultValue={m.court_address_notes ?? ""}
+                      />
+                    </Field>
+                    <SubmitButton className="w-full" pendingLabel="Saving…">
+                      Save court details
+                    </SubmitButton>
+                  </form>
+                  <form action={cancelScheduledMatch} className="space-y-2 border-t border-border pt-3">
+                    <input type="hidden" name="match_id" value={m.id} />
+                    <Field label="Cancel this scheduled match">
+                      <Select name="cancellation_reason" required defaultValue="no_court_available">
+                        <option value="no_court_available">No court available</option>
+                        <option value="player_unavailable">Player unavailable</option>
+                        <option value="other">Other</option>
+                      </Select>
+                    </Field>
+                    <SubmitButton variant="secondary" className="w-full" pendingLabel="Cancelling…">
+                      Cancel match
+                    </SubmitButton>
+                  </form>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </Card>
 
         <Card title="Result">
-          {m.status !== "scheduled" ? (
+          {m.status === "cancelled" ? (
+            <p className="text-sm text-muted">
+              This match was cancelled. The pairing is not locked — schedule again from the Schedule page when ready.
+            </p>
+          ) : null}
+          {m.status !== "scheduled" && m.status !== "cancelled" ? (
             <p className="text-sm text-muted">
               You can still publish a result if the match happened outside the booking flow. Use open-game segments
               (e.g. 1:6 3:11 0:15) — first number = games for the first player on file above, second = the other player.
+            </p>
+          ) : null}
+          {m.status === "scheduled" && playedTimePassed && !score ? (
+            <p className="mt-3 rounded-xl border border-tennis-blue/30 bg-tennis-blue/10 p-3 text-sm font-medium text-foreground">
+              Enter result — the scheduled time is in the past.
+            </p>
+          ) : null}
+          {score && score.score_status === "disputed" ? (
+            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950">
+              Awaiting confirmation — this result was disputed and needs an organiser decision.
+            </p>
+          ) : null}
+          {score && score.score_status === "published" ? (
+            <p className="mt-3 rounded-xl border border-tennis-green/40 bg-tennis-green/10 p-3 text-sm font-medium text-foreground">
+              Result confirmed and published.
             </p>
           ) : null}
 
@@ -348,7 +447,7 @@ export default async function MatchDetailPage({
             <p className="text-sm text-muted">No result yet.</p>
           )}
 
-          {playerA && playerB && !pairingLocked ? (
+          {playerA && playerB && !pairingLocked && m.status !== "cancelled" ? (
             <form action={submitScore} className="mt-4 space-y-3">
               <input type="hidden" name="match_id" value={m.id} />
               <ScoreEntryFormControls

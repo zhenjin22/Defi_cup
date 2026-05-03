@@ -26,6 +26,7 @@ const MATCH_STATUSES = [
   "availability_confirmed",
   "booking_failed",
   "scheduled",
+  "cancelled",
   "published",
   "disputed",
   "resolved",

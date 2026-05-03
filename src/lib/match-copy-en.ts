@@ -17,6 +17,8 @@ export function matchStatusBadgeClass(status: string): string {
       return "bg-red-50 text-red-700 border border-red-200";
     case "scheduled":
       return "bg-tennis-green/15 text-foreground";
+    case "cancelled":
+      return "bg-foreground/5 text-muted";
     case "published":
       return "bg-foreground/10 text-foreground";
     case "disputed":
@@ -37,6 +39,7 @@ export const MATCH_STATUS_LABEL_EN: Record<string, string> = {
   availability_confirmed: "Availability confirmed",
   booking_failed: "Court unavailable",
   scheduled: "Court booked",
+  cancelled: "Cancelled",
   published: "Result published",
   disputed: "Result disputed",
   resolved: "Dispute settled",

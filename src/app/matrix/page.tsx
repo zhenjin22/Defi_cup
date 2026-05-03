@@ -26,6 +26,8 @@ function cellStyle(status: string) {
       return "bg-red-50";
     case "scheduled":
       return "bg-tennis-green/15";
+    case "cancelled":
+      return "bg-foreground/5";
     case "published":
       return "bg-foreground/10";
     case "disputed":
@@ -55,6 +57,8 @@ function shortStatus(status: string) {
       return "T";
     case "scheduled":
       return "R";
+    case "cancelled":
+      return "—";
     case "published":
       return "✓";
     case "disputed":
@@ -76,11 +80,12 @@ export default async function MatrixPage() {
   const matches = await fetchGroupMatches(DEFAULT_GROUP);
   const scoresByMatchId = await fetchScoresByMatchIds(matches.map((m) => m.id));
 
-  const matchByKey = new Map<string, { id: string; status: string }>();
+  const matchByKey = new Map<string, { id: string; status: string; courtReserved: boolean }>();
   for (const m of matches) {
     matchByKey.set(getMatchKey(m.player_a_id, m.player_b_id), {
       id: m.id,
       status: m.status,
+      courtReserved: m.court_reserved ?? false,
     });
   }
 
@@ -90,7 +95,7 @@ export default async function MatrixPage() {
         title={DEFAULT_GROUP}
         right={
           <span className="max-w-[220px] text-right text-[10px] leading-tight text-muted sm:max-w-none sm:text-xs">
-            Completed cells show the score · ⏳ pending · A accepted · R booked · ⚠ disputed
+            Score = finished · Sched = booked · Court? = court not confirmed · ⏳ invite flow · ⚠ disputed
           </span>
         }
       >
@@ -124,6 +129,9 @@ export default async function MatrixPage() {
                     const match = matchByKey.get(key);
                     const status = match?.status ?? "not_scheduled";
                     const completed = match ? isPairingResultLocked(match.status as MatchStatus) : false;
+                    const cancelled = match?.status === "cancelled";
+                    const scheduledNoCourt =
+                      match?.status === "scheduled" && match && !match.courtReserved;
                     const completedLabel = completed
                       ? formatMatrixScoreCell(scoresByMatchId.get(match!.id))
                       : "";
@@ -144,12 +152,27 @@ export default async function MatrixPage() {
                           title={
                             completed
                               ? `Completed — ${completedLabel} (pairing locked)`
-                              : status.replaceAll("_", " ")
+                              : cancelled
+                                ? "Cancelled — you can schedule again"
+                                : scheduledNoCourt
+                                  ? "Scheduled — court not booked yet"
+                                  : status.replaceAll("_", " ")
                           }
                         >
                           {completed ? (
                             <span className="max-w-[4.5rem] break-words text-[10px] font-semibold leading-tight text-tennis-green">
                               {completedLabel}
+                            </span>
+                          ) : cancelled ? (
+                            <span className="text-[10px] font-medium text-muted">—</span>
+                          ) : match?.status === "scheduled" ? (
+                            <span
+                              className={[
+                                "text-[10px] font-semibold leading-tight",
+                                scheduledNoCourt ? "text-amber-800" : "text-tennis-green",
+                              ].join(" ")}
+                            >
+                              {scheduledNoCourt ? "Court?" : "Sched"}
                             </span>
                           ) : (
                             <span>{shortStatus(status)}</span>

@@ -19,6 +19,7 @@ const MATCH_STATUSES = [
   "availability_confirmed",
   "booking_failed",
   "scheduled",
+  "cancelled",
   "published",
   "disputed",
   "resolved",
@@ -104,8 +105,17 @@ export async function adminResetMatch(formData: FormData) {
       inviter_player_id: null,
       booking_responsible: "undecided",
       booking_status: "not_started",
+      court_reserved: false,
+      cancellation_reason: null,
+      cancelled_at: null,
+      cancelled_by_player_id: null,
     })
     .eq("id", parsed.data.id);
+
+  await supabase
+    .from("availability_slots")
+    .update({ status: "open", claimed_by_player_id: null, match_id: null })
+    .eq("match_id", parsed.data.id);
 
   if (error) adminErr(error.message);
   revalidatePath("/admin");
