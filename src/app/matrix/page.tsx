@@ -4,7 +4,8 @@ import { ViewerControls } from "@/components/ViewerControls";
 import { Card } from "@/components/ui/Card";
 import type { MatchStatus } from "@/lib/db/types";
 import { isPairingResultLocked } from "@/lib/pair-lock";
-import { fetchGroupMatches, fetchGroupPlayers, getMatchKey } from "@/lib/queries";
+import { formatMatrixScoreCell } from "@/lib/score-entry";
+import { fetchGroupMatches, fetchGroupPlayers, fetchScoresByMatchIds, getMatchKey } from "@/lib/queries";
 import { DEFAULT_GROUP, getViewer } from "@/lib/viewer";
 
 function cellStyle(status: string) {
@@ -73,6 +74,7 @@ export default async function MatrixPage() {
   }
   const players = await fetchGroupPlayers(DEFAULT_GROUP);
   const matches = await fetchGroupMatches(DEFAULT_GROUP);
+  const scoresByMatchId = await fetchScoresByMatchIds(matches.map((m) => m.id));
 
   const matchByKey = new Map<string, { id: string; status: string }>();
   for (const m of matches) {
@@ -88,7 +90,7 @@ export default async function MatrixPage() {
         title={DEFAULT_GROUP}
         right={
           <span className="max-w-[220px] text-right text-[10px] leading-tight text-muted sm:max-w-none sm:text-xs">
-            Done = completed (locked) · ⏳ pending · A accepted · R booked · ⚠ disputed
+            Completed cells show the score · ⏳ pending · A accepted · R booked · ⚠ disputed
           </span>
         }
       >
@@ -122,6 +124,9 @@ export default async function MatrixPage() {
                     const match = matchByKey.get(key);
                     const status = match?.status ?? "not_scheduled";
                     const completed = match ? isPairingResultLocked(match.status as MatchStatus) : false;
+                    const completedLabel = completed
+                      ? formatMatrixScoreCell(scoresByMatchId.get(match!.id))
+                      : "";
                     const href = completed
                       ? `/matches/${match!.id}`
                       : match
@@ -137,12 +142,14 @@ export default async function MatrixPage() {
                             cellStyle(status),
                           ].join(" ")}
                           title={
-                            completed ? "Completed — pairing locked" : status.replaceAll("_", " ")
+                            completed
+                              ? `Completed — ${completedLabel} (pairing locked)`
+                              : status.replaceAll("_", " ")
                           }
                         >
                           {completed ? (
-                            <span className="text-[10px] font-bold uppercase tracking-tight text-tennis-green">
-                              Done
+                            <span className="max-w-[4.5rem] break-words text-[10px] font-semibold leading-tight text-tennis-green">
+                              {completedLabel}
                             </span>
                           ) : (
                             <span>{shortStatus(status)}</span>

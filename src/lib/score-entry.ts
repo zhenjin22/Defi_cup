@@ -199,3 +199,42 @@ export function formatPublishedScore(params: {
   }
   return base;
 }
+
+/** Short label for completed-match matrix cells (not full {@link formatPublishedScore} lines). */
+export function formatMatrixScoreCell(
+  score: Pick<Score, "score_text" | "no_show_status" | "final_score_preset"> | null | undefined,
+): string {
+  if (!score) return "Done";
+
+  if (score.no_show_status === "both_absent") return "Cancelled";
+
+  if (score.no_show_status === "player_a_absent" || score.no_show_status === "player_b_absent") {
+    return "WO";
+  }
+
+  const trimmed = score.score_text.trim();
+  if (!trimmed) return "Done";
+
+  const head = trimmed.split(" — ")[0]?.trim() ?? "";
+  const gamesHead = parseOpenGameScoreInput(head);
+  if (gamesHead) {
+    return gamesHead.display.replace(/:/g, "-");
+  }
+
+  if (score.final_score_preset) {
+    const pl = presetLabel(score.final_score_preset);
+    const presetHead = pl.split(/\s[—–]\s/)[0] ?? pl;
+    const compact = presetHead.replace(/\s*\/\s*/g, "/").replace(/\s+/g, " ").trim();
+    if (compact) return compact;
+  }
+
+  if (/walkover/i.test(trimmed)) return "WO";
+  if (/cancelled/i.test(trimmed) && /both\s+players?\s+absent/i.test(trimmed)) return "Cancelled";
+
+  const gamesWhole = parseOpenGameScoreInput(trimmed);
+  if (gamesWhole) {
+    return gamesWhole.display.replace(/:/g, "-");
+  }
+
+  return trimmed.length <= 14 ? trimmed : `${trimmed.slice(0, 13)}…`;
+}
