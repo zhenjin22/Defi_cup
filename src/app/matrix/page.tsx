@@ -80,12 +80,17 @@ export default async function MatrixPage() {
   const matches = await fetchGroupMatches(DEFAULT_GROUP);
   const scoresByMatchId = await fetchScoresByMatchIds(matches.map((m) => m.id));
 
-  const matchByKey = new Map<string, { id: string; status: string; courtReserved: boolean }>();
+  const matchByKey = new Map<
+    string,
+    { id: string; status: string; courtReserved: boolean; playerAId: string; playerBId: string }
+  >();
   for (const m of matches) {
     matchByKey.set(getMatchKey(m.player_a_id, m.player_b_id), {
       id: m.id,
       status: m.status,
       courtReserved: m.court_reserved ?? false,
+      playerAId: m.player_a_id,
+      playerBId: m.player_b_id,
     });
   }
 
@@ -133,7 +138,9 @@ export default async function MatrixPage() {
                     const scheduledNoCourt =
                       match?.status === "scheduled" && match && !match.courtReserved;
                     const completedLabel = completed
-                      ? formatMatrixScoreCell(scoresByMatchId.get(match!.id))
+                      ? formatMatrixScoreCell(scoresByMatchId.get(match!.id), {
+                          mirrorGameSegments: row.id === match!.playerBId,
+                        })
                       : "";
                     const href = completed
                       ? `/matches/${match!.id}`

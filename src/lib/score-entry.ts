@@ -200,10 +200,28 @@ export function formatPublishedScore(params: {
   return base;
 }
 
+export type FormatMatrixScoreCellOpts = {
+  /** True when matrix row is canonical player_b (vs player_a column): flip each stored A:B segment to B:A. */
+  mirrorGameSegments?: boolean;
+};
+
+function formatMatrixGamesLine(
+  parsed: NonNullable<ReturnType<typeof parseOpenGameScoreInput>>,
+  mirrored: boolean,
+): string {
+  const pairs = mirrored
+    ? parsed.pairs.map(([a, b]): [number, number] => [b, a])
+    : parsed.pairs;
+  return pairs.map(([a, b]) => `${a}:${b}`).join(" ").replace(/:/g, "-");
+}
+
 /** Short label for completed-match matrix cells (not full {@link formatPublishedScore} lines). */
 export function formatMatrixScoreCell(
   score: Pick<Score, "score_text" | "no_show_status" | "final_score_preset"> | null | undefined,
+  opts?: FormatMatrixScoreCellOpts,
 ): string {
+  const mirrored = opts?.mirrorGameSegments ?? false;
+
   if (!score) return "Done";
 
   if (score.no_show_status === "both_absent") return "Cancelled";
@@ -218,7 +236,7 @@ export function formatMatrixScoreCell(
   const head = trimmed.split(" — ")[0]?.trim() ?? "";
   const gamesHead = parseOpenGameScoreInput(head);
   if (gamesHead) {
-    return gamesHead.display.replace(/:/g, "-");
+    return formatMatrixGamesLine(gamesHead, mirrored);
   }
 
   if (score.final_score_preset) {
@@ -233,7 +251,7 @@ export function formatMatrixScoreCell(
 
   const gamesWhole = parseOpenGameScoreInput(trimmed);
   if (gamesWhole) {
-    return gamesWhole.display.replace(/:/g, "-");
+    return formatMatrixGamesLine(gamesWhole, mirrored);
   }
 
   return trimmed.length <= 14 ? trimmed : `${trimmed.slice(0, 13)}…`;
